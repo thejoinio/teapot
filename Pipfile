@@ -8,9 +8,10 @@ environs = "*"
 starlette = "*"
 discord = "*"
 telethon = "*"
-sqlalchemy = "*"
 uvicorn = "*"
 asyncpg = "*"
+greenlet = "*"
+sqlalchemy = {extras = ["asyncio"], version = "*"}
 
 [dev-packages]
 

@@ -1,9 +1,12 @@
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from discord import Client
+from discord import Intents, Client
 from ..config import DISCORD_TOKEN
 
-discord_client = Client()
+intents = Intents.default()
+intents.message_content = True
+
+discord_client = Client(intents=intents)
 
 async def verify_discord(request: Request):
     data = await request.json()

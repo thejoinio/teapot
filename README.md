@@ -59,7 +59,7 @@ Before setting up Teapot, ensure you have the following installed:
    Apply the database migrations to set up the PostgreSQL database.
 
    ```bash
-   python -m teapot.app.models
+   python -m app.models
    ```
 
 6. **Run the Application**
