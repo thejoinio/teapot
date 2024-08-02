@@ -15,8 +15,10 @@ sqlalchemy = {extras = ["asyncio"], version = "*"}
 django = "*"
 djangorestframework = "*"
 psycopg2-binary = "*"
+gunicorn = "*"
 
 [dev-packages]
+ipython = "*"
 
 [requires]
 python_version = "3.11"
