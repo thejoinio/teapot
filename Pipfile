@@ -12,6 +12,9 @@ uvicorn = "*"
 asyncpg = "*"
 greenlet = "*"
 sqlalchemy = {extras = ["asyncio"], version = "*"}
+django = "*"
+djangorestframework = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
