@@ -3,7 +3,7 @@
 
 # Teapot
 
-**Teapot** is a collection of helper services developed for **The Join**. These services are designed to streamline and automate verification processes across various communication platforms, including email, Telegram, and Discord.
+**Teapot** is a Django-based project designed to create helper services for **The Join**, a company. The project includes services for email submission, Telegram user verification, and Discord user verification.
 
 ## Features
 
@@ -18,8 +18,10 @@
 Before setting up Teapot, ensure you have the following installed:
 
 - Python 3.11+
+- Django 4.x
 - PostgreSQL
 - pipenv (Python package manager)
+- Heroku CLI (deployment)
 
 ### Installation
 
@@ -33,7 +35,7 @@ Before setting up Teapot, ensure you have the following installed:
 2. **Install Dependencies**
 
    ```bash
-   pipenv install
+   pipenv install --dev
    ```
 
 3. **Activate the Virtual Environment**
@@ -47,11 +49,17 @@ Before setting up Teapot, ensure you have the following installed:
    Create a `.env` file in the root of the project and add the following environment variables:
 
    ```bash
-   DATABASE_URL=postgresql+asyncpg://user:password@localhost/dbname
-   TELEGRAM_API_ID=your_telegram_api_id
-   TELEGRAM_API_HASH=your_telegram_api_hash
-   TELEGRAM_CHANNEL=your_telegram_channel_name_or_id
-   DISCORD_TOKEN=your_discord_token
+   DEBUG=True
+   ALLOWED_HOSTS=localhost,127.0.0.1
+   DB_NAME=database_name
+   DB_USER=database_user
+   DB_PASS=database_password
+   DB_HOST=localhost
+   DB_PORT=5432
+   TELEGRAM_API_ID=telegram_api_id
+   TELEGRAM_API_HASH=telegram_api_hash
+   TELEGRAM_CHANNEL=telegram_channel_name_or_id
+   DISCORD_TOKEN=discord_token
    ```
 
 5. **Set Up the Database**
@@ -59,7 +67,7 @@ Before setting up Teapot, ensure you have the following installed:
    Apply the database migrations to set up the PostgreSQL database.
 
    ```bash
-   python -m app.models
+   python manage.py migrate
    ```
 
 6. **Run the Application**
@@ -67,10 +75,21 @@ Before setting up Teapot, ensure you have the following installed:
    Start the application using the `uvicorn` server:
 
    ```bash
-   uvicorn main:app --reload
+   python manage.py runserver
    ```
 
    The application will be accessible at `http://localhost:8000`.
+
+### Deployment on Heroku
+
+1. **Access Heroku App**
+
+   An Heroku App has been created to run the app. Contact the head of engineering to get access to the `staging` and `prod` apps.
+
+2. **Deployment to Heroku**
+
+   Push changes to a feature branch and create a PR to merge on `staging`. Accepted PRs are merged to main and auto-deployed.
+
 
 ### Usage
 
