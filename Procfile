@@ -1,4 +1,4 @@
 release: python manage.py makemigrations
 release: python manage.py migrate
 # release: python manage.py collectstatic
-web: gunicorn seven.wsgi
+web: gunicorn teapot.wsgi
