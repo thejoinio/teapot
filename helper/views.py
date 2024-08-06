@@ -1,19 +1,22 @@
 # helper/views.py
-from rest_framework.views import APIView
+import re
+from asgiref.sync import sync_to_async
+
+# from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Email
+from .models import TelegramMember
 from .serializers import EmailSerializer
 
-from telethon import TelegramClient
+from adrf.views import APIView
 from discord import Intents, Client
 
-from teapot.config import TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_CHANNEL, DISCORD_TOKEN
-
-telegram_client = TelegramClient('session_name', TELEGRAM_API_ID, TELEGRAM_API_HASH)
+from teapot.config import TELEGRAM_CHANNEL, DISCORD_TOKEN
+from .services.telegram import client, cache_channel_members
 
 intents = Intents.default()
-intents.message_content = True
+intents.members = True
+intents.guilds = True
 discord_client = Client(intents=intents)
 
 
@@ -26,21 +29,45 @@ class SubmitEmailView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyTelegramView(APIView):
-    def post(self, request):
-        identifier = request.data.get('identifier')
-        if identifier:
-            telegram_client.start()
+    
+    async def post(self, request):
+        phone_number = request.data.get('phone_number')
+        if not phone_number:
+            return Response({'status': 'error', 'message': 'Phone number is required'}, status=400)
 
+        # Check the cached data first
+        phone_number = re.sub(r'\D', '', phone_number)
+        phone_number_exists_in_cache = await self.get_telegram_member(phone_number)
+        
+        if phone_number_exists_in_cache:
+            return Response({'status': 'success', 'message': 'User is part of the channel (cached)'})
+        else:
             try:
-                participant = telegram_client.get_participant(TELEGRAM_CHANNEL, identifier)
-                if participant:
+                await client.start()
+
+                phone_number_is_in_channel = False
+
+                channel = await client.get_entity(TELEGRAM_CHANNEL)
+                participants = await client.get_participants(channel)
+
+                for participant in participants:
+                    if phone_number == participant.phone:
+                        phone_number_is_in_channel = True
+                
+                await cache_channel_members(participants)
+
+                if phone_number_is_in_channel:
                     return Response({'status': 'success', 'message': 'User is part of the channel'})
                 else:
-                    return Response({'status': 'error', 'message': 'User is not part of the channel'}, status=status.HTTP_400_BAD_REQUEST)
-            except Exception as e:
-                return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+                    Response({'status': 'error', 'message': 'User is not part of the channel'}, status=404)
 
-        return Response({'status': 'error', 'message': 'Identifier is required'}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({'status': 'error', 'message': str(e)}, status=400)
+        return Response({'status': 'error', 'message': 'User is not part of the channel'}, status=404)
+    
+    @sync_to_async
+    def get_telegram_member(self, phone_number):
+        return TelegramMember.objects.filter(phone_number=phone_number).exists()
 
 class VerifyDiscordView(APIView):
     def post(self, request):
