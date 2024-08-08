@@ -97,7 +97,7 @@ Teapot provides three main endpoints:
 
 1. **Submit Email**
 
-   - **Endpoint**: `POST /submit-email`
+   - **Endpoint**: `POST /helper/submit-email/`
    - **Body**: JSON
      ```json
      {
@@ -107,7 +107,7 @@ Teapot provides three main endpoints:
 
 2. **Verify Telegram**
 
-   - **Endpoint**: `POST /verify-telegram`
+   - **Endpoint**: `POST /helper/verify-telegram/`
    - **Body**: JSON
      ```json
      {
@@ -117,7 +117,7 @@ Teapot provides three main endpoints:
 
 3. **Verify Discord**
 
-   - **Endpoint**: `POST /verify-discord`
+   - **Endpoint**: `POST /herlper/verify-discord/`
    - **Body**: JSON
      ```json
      {
