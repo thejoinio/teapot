@@ -63,7 +63,7 @@ class VerifyTelegramView(APIView):
             return Response({'status': 'success', 'message': 'User is part of the channel (cached)'})
         else:
             try:
-                await client.start(bot_token=TELEGRAM_BOT_TOKEN)
+                await client.start()
 
                 phone_number_is_in_channel = False
 

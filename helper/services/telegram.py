@@ -13,11 +13,11 @@ api_id = TELEGRAM_API_ID
 api_hash = TELEGRAM_API_HASH
 channel_id = TELEGRAM_CHANNEL
 
-telethon_service_id = "teapot-service"
+telethon_session_id = "teapot-service"
 
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
-client = TelegramClient(telethon_service_id, api_id, api_hash, loop=loop)
+client = TelegramClient(telethon_session_id, api_id, api_hash, loop=loop)
 
 async def cache_channel_members(participants=None):
     try:
