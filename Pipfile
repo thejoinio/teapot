@@ -17,6 +17,7 @@ djangorestframework = "*"
 psycopg2-binary = "*"
 gunicorn = "*"
 adrf = "*"
+markdown = "*"
 
 [dev-packages]
 ipython = "*"

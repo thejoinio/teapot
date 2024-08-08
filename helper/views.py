@@ -1,13 +1,17 @@
 # helper/views.py
-import re
+
+import re, os
 from asgiref.sync import sync_to_async
 
 # from rest_framework.views import APIView
+from django.shortcuts import render
+from django.http import Http404
 from rest_framework.response import Response
 from rest_framework import status
 from .models import TelegramMember
 from .serializers import EmailSerializer
 
+import markdown
 from adrf.views import APIView
 from discord import Intents, Client
 
@@ -19,6 +23,22 @@ intents.members = True
 intents.guilds = True
 discord_client = Client(intents=intents)
 
+
+def render_markdown_page(request, page_name):
+    static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    file_path = os.path.join(static_dir, f"{page_name}.md")
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        html_content = markdown.markdown(content)
+    except FileNotFoundError:
+        raise Http404("Page not found")
+
+    return render(request, 'helper/markdown.html', {
+        'content': html_content,
+        'title': page_name.capitalize()
+    })
 
 class SubmitEmailView(APIView):
     def post(self, request):

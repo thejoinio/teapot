@@ -17,7 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from helper.views import render_markdown_page
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('helper/', include('helper.urls')),
+    # path('', home, name='home'),
+    path('', lambda request: render_markdown_page(request, 'home'), name='home'),
+    path('terms/', lambda request: render_markdown_page(request, 'terms'), name='terms'),
+    path('privacy/', lambda request: render_markdown_page(request, 'privacy'), name='privacy')
 ]
