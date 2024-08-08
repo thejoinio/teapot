@@ -4,20 +4,22 @@ import asyncio
 # from subprocess import check_output
 
 from telethon import TelegramClient
+from telethon.sessions import StringSession
 
 from helper.models import TelegramMember
 
-from teapot.config import TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_CHANNEL
+from teapot.config import TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_CHANNEL, TELETHON_SESSION
 
 api_id = TELEGRAM_API_ID
 api_hash = TELEGRAM_API_HASH
 channel_id = TELEGRAM_CHANNEL
 
 telethon_session_id = "teapot-service"
+telethon_session = TELETHON_SESSION
 
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
-client = TelegramClient(telethon_session_id, api_id, api_hash, loop=loop)
+client = TelegramClient(StringSession(telethon_session), api_id, api_hash, loop=loop)
 
 async def cache_channel_members(participants=None):
     try:
