@@ -15,7 +15,7 @@ import markdown
 from adrf.views import APIView
 from discord import Intents, Client
 
-from teapot.config import TELEGRAM_CHANNEL, DISCORD_TOKEN
+from teapot.config import TELEGRAM_CHANNEL, TELEGRAM_BOT_TOKEN, DISCORD_TOKEN
 from .services.telegram import client, cache_channel_members
 
 intents = Intents.default()
@@ -63,7 +63,7 @@ class VerifyTelegramView(APIView):
             return Response({'status': 'success', 'message': 'User is part of the channel (cached)'})
         else:
             try:
-                await client.start()
+                await client.start(bot_token=TELEGRAM_BOT_TOKEN)
 
                 phone_number_is_in_channel = False
 
