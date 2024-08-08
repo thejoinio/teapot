@@ -59,6 +59,9 @@ Before setting up Teapot, ensure you have the following installed:
    TELEGRAM_API_ID=telegram_api_id
    TELEGRAM_API_HASH=telegram_api_hash
    TELEGRAM_CHANNEL=telegram_channel_name_or_id
+   TELEGRAM_BOT=telegram_bot
+   TELEGRAM_BOT_TOKEN=telegram_bot_token
+   TELETHON_SESSION=telethon_session
    DISCORD_TOKEN=discord_token
    ```
 
@@ -111,7 +114,7 @@ Teapot provides three main endpoints:
    - **Body**: JSON
      ```json
      {
-       "identifier": "telegram_username_or_phone"
+       "phone_number": "telegram_phone" # international phone number format
      }
      ```
 
