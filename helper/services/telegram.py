@@ -19,13 +19,13 @@ telethon_session = TELETHON_SESSION
 
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
-client = TelegramClient(StringSession(telethon_session), api_id, api_hash, loop=loop)
+telegram_client = TelegramClient(StringSession(telethon_session), api_id, api_hash, loop=loop)
 
 async def cache_channel_members(participants=None):
     try:
         if not participants:
-            channel = await client.get_entity(channel_id)
-            participants = await client.get_participants(channel)
+            channel = await telegram_client.get_entity(channel_id)
+            participants = await telegram_client.get_participants(channel)
         await TelegramMember.objects.all().adelete()  # Clear existing cached data
         members_to_add = []
         for p in participants:
@@ -33,4 +33,4 @@ async def cache_channel_members(participants=None):
                 members_to_add.append(TelegramMember(phone_number=p.phone, username=p.username))
         await TelegramMember.objects.abulk_create(members_to_add)
     finally:
-        await client.disconnect()
+        await telegram_client.disconnect()

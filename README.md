@@ -104,7 +104,7 @@ Teapot provides three main endpoints:
    - **Body**: JSON
      ```json
      {
-       "email": "user@example.com"
+       "address": "user@example.com"
      }
      ```
 
@@ -124,7 +124,7 @@ Teapot provides three main endpoints:
    - **Body**: JSON
      ```json
      {
-       "discord_tag": "username#1234"
+       "discord_tag": "username"
      }
      ```
 
