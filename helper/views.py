@@ -3,25 +3,22 @@
 import re, os
 from asgiref.sync import sync_to_async
 
-# from rest_framework.views import APIView
 from django.shortcuts import render
 from django.http import Http404
 from rest_framework.response import Response
 from rest_framework import status
-from .models import TelegramMember
+from .models import TelegramMember, DiscordMember
 from .serializers import EmailSerializer
 
 import markdown
 from adrf.views import APIView
-from discord import Intents, Client
 
-from teapot.config import TELEGRAM_CHANNEL, TELEGRAM_BOT_TOKEN, DISCORD_TOKEN
-from .services.telegram import client, cache_channel_members
+from teapot.config import TELEGRAM_CHANNEL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID
+from .services.telegram import telegram_client, cache_channel_members
+from .services.discord import discord_client, cache_server_members
 
-intents = Intents.default()
-intents.members = True
-intents.guilds = True
-discord_client = Client(intents=intents)
+discord_bot_token = DISCORD_BOT_TOKEN
+discord_server_id = DISCORD_SERVER_ID
 
 
 def render_markdown_page(request, page_name):
@@ -53,9 +50,9 @@ class VerifyTelegramView(APIView):
     async def post(self, request):
         phone_number = request.data.get('phone_number')
         if not phone_number:
-            return Response({'status': 'error', 'message': 'Phone number is required'}, status=400)
+            return Response({'status': 'error', 'message': 'phone_number is required'}, status=400)
 
-        # Check the cached data first
+        # check the cached data first
         phone_number = re.sub(r'\D', '', phone_number)
         phone_number_exists_in_cache = await self.get_telegram_member(phone_number)
         
@@ -63,12 +60,12 @@ class VerifyTelegramView(APIView):
             return Response({'status': 'success', 'message': 'User is part of the channel (cached)'})
         else:
             try:
-                await client.start()
+                await telegram_client.start()
 
                 phone_number_is_in_channel = False
 
-                channel = await client.get_entity(TELEGRAM_CHANNEL)
-                participants = await client.get_participants(channel)
+                channel = await telegram_client.get_entity(TELEGRAM_CHANNEL)
+                participants = await telegram_client.get_participants(channel)
 
                 for participant in participants:
                     if phone_number == participant.phone:
@@ -83,6 +80,9 @@ class VerifyTelegramView(APIView):
 
             except Exception as e:
                 return Response({'status': 'error', 'message': str(e)}, status=400)
+            finally:
+                telegram_client.disconnect()
+
         return Response({'status': 'error', 'message': 'User is not part of the channel'}, status=404)
     
     @sync_to_async
@@ -90,18 +90,61 @@ class VerifyTelegramView(APIView):
         return TelegramMember.objects.filter(phone_number=phone_number).exists()
 
 class VerifyDiscordView(APIView):
-    def post(self, request):
+    
+    async def post(self, request):
         discord_tag = request.data.get('discord_tag')
-        if discord_tag:
+        if not discord_tag:
+            return Response({'status': 'error', 'message': 'discord_tag is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # check cached data first
+        member_exists_in_cache = await self.member_exists_in_cache(discord_tag)
 
-            for guild in discord_client.guilds:
-                member = guild.get_member_named(discord_tag)
-                if member:
-                    return Response({'status': 'success', 'message': f'{discord_tag} is part of the guild'})
-            discord_client.close()
+        if member_exists_in_cache:
+            return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server (cached)'})
+        else:
+            try:
+                await discord_client.login(discord_bot_token)
 
-            discord_client.start(DISCORD_TOKEN)
+                member_is_in_server = False
 
-            return Response({'status': 'error', 'message': f'{discord_tag} is not part of the guild'}, status=status.HTTP_400_BAD_REQUEST)
+                guild = await self.get_discord_guild()
 
-        return Response({'status': 'error', 'message': 'Discord tag is required'}, status=status.HTTP_400_BAD_REQUEST)
+                if not guild:
+                    raise Exception("cannot find discord server")
+                
+                members = [member async for member in guild.fetch_members()]
+                    
+                for member in members:
+                    if member.name == discord_tag:
+                        member_is_in_server = True
+                        break
+                
+                await cache_server_members(members)
+
+                if member_is_in_server:
+                    return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server'})
+                else:
+                    return Response({'status': 'error', 'message': f'{discord_tag} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            except Exception as e:
+                raise
+                return Response({'status': 'error', 'message': str(e)}, status=400)
+            finally:
+                await discord_client.close()
+
+        return Response({'status': 'error', 'message': f'{discord_tag} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
+
+    async def get_discord_guild(self):
+        await discord_client.login(discord_bot_token)
+
+        guilds = [guild async for guild in discord_client.fetch_guilds(limit=150)]
+        
+        for guild in guilds:
+            if guild.id == discord_server_id:
+                return guild
+        
+        return None
+
+    @sync_to_async
+    def member_exists_in_cache(self, discord_tag):
+        return DiscordMember.objects.filter(name=discord_tag).exists()
