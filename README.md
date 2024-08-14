@@ -114,7 +114,7 @@ Teapot provides three main endpoints:
    - **Body**: JSON
      ```json
      {
-       "phone_number": "telegram_phone" # international phone number format
+       "username": "telegram_username"
      }
      ```
 
@@ -124,7 +124,7 @@ Teapot provides three main endpoints:
    - **Body**: JSON
      ```json
      {
-       "discord_tag": "username"
+       "username": "discord_username"
      }
      ```
 
