@@ -96,15 +96,15 @@ class VerifyTelegramView(APIView):
 class VerifyDiscordView(APIView):
     
     async def post(self, request):
-        discord_tag = request.data.get('discord_tag')
-        if not discord_tag:
-            return Response({'status': 'error', 'message': 'discord_tag is required'}, status=status.HTTP_400_BAD_REQUEST)
+        username = request.data.get('username')
+        if not username:
+            return Response({'status': 'error', 'message': 'username is required'}, status=status.HTTP_400_BAD_REQUEST)
         
         # check cached data first
-        member_exists_in_cache = await self.member_exists_in_cache(discord_tag)
+        member_exists_in_cache = await self.member_exists_in_cache(username)
 
         if member_exists_in_cache:
-            return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server', 'source': 'cache'})
+            return Response({'status': 'success', 'message': f'{username} is a member of the server', 'source': 'cache'})
         else:
             try:
                 await discord_client.login(discord_bot_token)
@@ -119,7 +119,7 @@ class VerifyDiscordView(APIView):
                 members = [member async for member in guild.fetch_members()]
                     
                 for member in members:
-                    if member.name == discord_tag:
+                    if member.name == username:
                         member_is_in_server = True
                         break
                 
@@ -127,10 +127,10 @@ class VerifyDiscordView(APIView):
 
                 if member_is_in_server:
                     discord_client.close()
-                    return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server', 'source': 'discord'})
+                    return Response({'status': 'success', 'message': f'{username} is a member of the server', 'source': 'discord'})
                 else:
                     discord_client.close()
-                    return Response({'status': 'error', 'message': f'{discord_tag} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'status': 'error', 'message': f'{username} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
                 discord_client.close()
                 return Response({'status': 'error', 'message': str(e)}, status=400)
@@ -149,5 +149,5 @@ class VerifyDiscordView(APIView):
         return None
 
     @sync_to_async
-    def member_exists_in_cache(self, discord_tag):
-        return DiscordMember.objects.filter(name=discord_tag).exists()
+    def member_exists_in_cache(self, username):
+        return DiscordMember.objects.filter(name=username).exists()
