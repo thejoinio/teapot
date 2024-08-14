@@ -57,7 +57,7 @@ class VerifyTelegramView(APIView):
         phone_number_exists_in_cache = await self.get_telegram_member(phone_number)
         
         if phone_number_exists_in_cache:
-            return Response({'status': 'success', 'message': 'User is part of the channel (cached)'})
+            return Response({'status': 'success', 'message': f'{phone_number} is a member of the channel', 'source': 'cache'})
         else:
             try:
                 await telegram_client.start()
@@ -74,16 +74,16 @@ class VerifyTelegramView(APIView):
                 await cache_channel_members(participants)
 
                 if phone_number_is_in_channel:
-                    return Response({'status': 'success', 'message': 'User is part of the channel'})
+                    return Response({'status': 'success', 'message': f'{phone_number} is a member of the channel', 'source': 'telegram'})
                 else:
-                    Response({'status': 'error', 'message': 'User is not part of the channel'}, status=404)
+                    Response({'status': 'error', 'message': f'{phone_number} is not a member of the channel'}, status=404)
 
             except Exception as e:
                 return Response({'status': 'error', 'message': str(e)}, status=400)
             finally:
                 telegram_client.disconnect()
 
-        return Response({'status': 'error', 'message': 'User is not part of the channel'}, status=404)
+        return Response({'status': 'error', 'message': f'{phone_number} is not a member of the channel'}, status=404)
     
     @sync_to_async
     def get_telegram_member(self, phone_number):
@@ -100,7 +100,7 @@ class VerifyDiscordView(APIView):
         member_exists_in_cache = await self.member_exists_in_cache(discord_tag)
 
         if member_exists_in_cache:
-            return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server (cached)'})
+            return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server', 'source': 'cache'})
         else:
             try:
                 await discord_client.login(discord_bot_token)
@@ -122,7 +122,7 @@ class VerifyDiscordView(APIView):
                 await cache_server_members(members)
 
                 if member_is_in_server:
-                    return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server'})
+                    return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server', 'source': 'discord'})
                 else:
                     return Response({'status': 'error', 'message': f'{discord_tag} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
             
