@@ -48,46 +48,50 @@ class SubmitEmailView(APIView):
 class VerifyTelegramView(APIView):
     
     async def post(self, request):
-        phone_number = request.data.get('phone_number')
-        if not phone_number:
-            return Response({'status': 'error', 'message': 'phone_number is required'}, status=400)
+        username = request.data.get('username')
+        if not username:
+            return Response({'status': 'error', 'message': 'username is required'}, status=400)
 
         # check the cached data first
-        phone_number = re.sub(r'\D', '', phone_number)
-        phone_number_exists_in_cache = await self.get_telegram_member(phone_number)
+        username_exists_in_cache = await self.get_telegram_member(username)
         
-        if phone_number_exists_in_cache:
-            return Response({'status': 'success', 'message': f'{phone_number} is a member of the channel', 'source': 'cache'})
+        if username_exists_in_cache:
+            return Response({'status': 'success', 'message': f'{username} is a member of the channel', 'source': 'cache'})
         else:
             try:
                 await telegram_client.start()
 
-                phone_number_is_in_channel = False
+                username_is_in_channel = False
 
                 channel = await telegram_client.get_entity(TELEGRAM_CHANNEL)
                 participants = await telegram_client.get_participants(channel)
 
                 for participant in participants:
-                    if phone_number == participant.phone:
-                        phone_number_is_in_channel = True
+                    if username == participant.username:
+                        username_is_in_channel = True
                 
                 await cache_channel_members(participants)
 
-                if phone_number_is_in_channel:
-                    return Response({'status': 'success', 'message': f'{phone_number} is a member of the channel', 'source': 'telegram'})
+                if username_is_in_channel:
+                    telegram_client.disconnect()
+                    return Response({'status': 'success', 'message': f'{username} is a member of the channel', 'source': 'telegram'})
                 else:
-                    Response({'status': 'error', 'message': f'{phone_number} is not a member of the channel'}, status=404)
+                    telegram_client.disconnect()
+                    return Response({'status': 'error', 'message': f'{username} is not a member of the channel'}, status=404)
 
             except Exception as e:
+                telegram_client.disconnect()
                 return Response({'status': 'error', 'message': str(e)}, status=400)
             finally:
                 telegram_client.disconnect()
-
-        return Response({'status': 'error', 'message': f'{phone_number} is not a member of the channel'}, status=404)
     
     @sync_to_async
-    def get_telegram_member(self, phone_number):
+    def get_telegram_member_by_phone(self, phone_number):
         return TelegramMember.objects.filter(phone_number=phone_number).exists()
+    
+    @sync_to_async
+    def get_telegram_member(self, username):
+        return TelegramMember.objects.filter(username=username).exists()
 
 class VerifyDiscordView(APIView):
     
@@ -122,17 +126,16 @@ class VerifyDiscordView(APIView):
                 await cache_server_members(members)
 
                 if member_is_in_server:
+                    discord_client.close()
                     return Response({'status': 'success', 'message': f'{discord_tag} is a member of the server', 'source': 'discord'})
                 else:
+                    discord_client.close()
                     return Response({'status': 'error', 'message': f'{discord_tag} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
-            
             except Exception as e:
-                raise
+                discord_client.close()
                 return Response({'status': 'error', 'message': str(e)}, status=400)
             finally:
                 await discord_client.close()
-
-        return Response({'status': 'error', 'message': f'{discord_tag} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
 
     async def get_discord_guild(self):
         await discord_client.login(discord_bot_token)
