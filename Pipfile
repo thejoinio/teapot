@@ -19,6 +19,7 @@ gunicorn = "*"
 adrf = "*"
 markdown = "*"
 django-cors-headers = "*"
+requests = "*"
 
 [dev-packages]
 ipython = "*"

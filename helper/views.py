@@ -1,19 +1,22 @@
 # helper/views.py
 
-import re, os
+import os
 from asgiref.sync import sync_to_async
 
 from django.shortcuts import render
 from django.http import Http404
+from django.conf import settings
 from rest_framework.response import Response
 from rest_framework import status
 from .models import TelegramMember, DiscordMember
 from .serializers import EmailSerializer
 
-import markdown
+import markdown, requests
 from adrf.views import APIView
 
-from teapot.config import TELEGRAM_CHANNEL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID
+from teapot.config import TELEGRAM_CHANNEL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID,\
+      ZEPTOMAIL_TEMPLATE_ALIAS, ZEPTOMAIL_SENDMAIL_TOKEN, ZEPTOMAIL_SENDER, \
+      ZEPTOMAIL_SENDER_ADDRESS
 from .services.telegram import telegram_client, cache_channel_members
 from .services.discord import discord_client, cache_server_members
 
@@ -41,8 +44,51 @@ class SubmitEmailView(APIView):
     def post(self, request):
         serializer = EmailSerializer(data=request.data)
         if serializer.is_valid():
+            email_address = serializer.validated_data['address']
             serializer.save()
-            return Response({'status': 'success', 'email': serializer.data['address']}, status=status.HTTP_201_CREATED)
+
+            # Send welcome email using ZeptoMail Template API
+            zepto_mail_template_alias = ZEPTOMAIL_TEMPLATE_ALIAS
+            zepto_mail_sendmail_token = ZEPTOMAIL_SENDMAIL_TOKEN
+            zepto_mail_api_url = 'https://api.zeptomail.com/v1.1/email/template'
+
+            payload = {
+                'from': {
+                    'address': ZEPTOMAIL_SENDER_ADDRESS,
+                    'name': ZEPTOMAIL_SENDER
+                },
+                'to': [
+                    {
+                        'email_address': {
+                            'address': email_address,
+                        }
+                    }
+                ],
+                'template_alias': zepto_mail_template_alias,
+                'merge_info': {}
+            }
+
+            headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': zepto_mail_sendmail_token
+            }
+
+            # Make POST request to ZeptoMail API
+            try:
+                response = requests.post(zepto_mail_api_url, json=payload, headers=headers)
+                if response.status_code == 201:
+                    return Response({'status': 'success', 'email': email_address}, status=status.HTTP_201_CREATED)
+                else:
+                    payload = {
+                        'status': 'error',
+                        'message': 'Failed to send email. Please try again later.',
+                        'error': response.json()['error'] if settings.DEBUG else 'Failed to send email. Please try again later.'
+                    }
+                    return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyTelegramView(APIView):
