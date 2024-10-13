@@ -8,6 +8,8 @@ from django.utils import timezone
 class Email(models.Model):
     address = models.EmailField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    country = models.CharField(max_length=2, null=True, blank=True)  # Optional two-letter country code
+    campaign = models.CharField(max_length=10, null=True, blank=True)  # Optional campaign code
 
     def __str__(self):
         return self.address

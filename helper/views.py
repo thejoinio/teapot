@@ -16,7 +16,7 @@ from adrf.views import APIView
 
 from teapot.config import TELEGRAM_CHANNEL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID,\
       ZEPTOMAIL_TEMPLATE_ALIAS, ZEPTOMAIL_SENDMAIL_TOKEN, ZEPTOMAIL_SENDER, \
-      ZEPTOMAIL_SENDER_ADDRESS
+      ZEPTOMAIL_SENDER_ADDRESS, CAMPAIGN_CODES
 from .services.telegram import telegram_client, cache_channel_members
 from .services.discord import discord_client, cache_server_members
 
@@ -41,16 +41,38 @@ def render_markdown_page(request, page_name):
     })
 
 class SubmitEmailView(APIView):
+    VALID_CAMPAIGNS = CAMPAIGN_CODES
+
     def post(self, request):
         serializer = EmailSerializer(data=request.data)
         if serializer.is_valid():
             email_address = serializer.validated_data['address']
+            country = serializer.validated_data.get('country', None)  # Optional country
+            campaign = serializer.validated_data.get('campaign', None)  # Optional campaign
+
+            # Validate the country (ISO 3166-1 alpha-2)
+            if country and len(country) != 2:
+                return Response({'status': 'error', 'message': 'Invalid country code. Must be a 2-letter code.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate the campaign against valid campaign codes
+            if campaign and campaign not in self.VALID_CAMPAIGNS:
+                return Response({'status': 'error', 'message': 'Invalid campaign code.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            
             serializer.save()
 
             # Send welcome email using ZeptoMail Template API
             zepto_mail_template_alias = ZEPTOMAIL_TEMPLATE_ALIAS
             zepto_mail_sendmail_token = ZEPTOMAIL_SENDMAIL_TOKEN
             zepto_mail_api_url = 'https://api.zeptomail.com/v1.1/email/template'
+
+            # Add the optional fields to the merge_info if provided
+            merge_info = {}
+            if country:
+                merge_info['country'] = country
+            if campaign:
+                merge_info['campaign'] = campaign
 
             payload = {
                 'from': {
@@ -65,7 +87,7 @@ class SubmitEmailView(APIView):
                     }
                 ],
                 'template_alias': zepto_mail_template_alias,
-                'merge_info': {}
+                'merge_info': merge_info
             }
 
             headers = {
