@@ -49,6 +49,7 @@ class SubmitEmailView(APIView):
             email_address = serializer.validated_data['address']
             country = serializer.validated_data.get('country', None)  # Optional country
             campaign = serializer.validated_data.get('campaign', None)  # Optional campaign
+            discord_username = serializer.validated_data.get('discord_username', None) # Optional Discord username
 
             # Validate the country (ISO 3166-1 alpha-2)
             if country and len(country) != 2:
