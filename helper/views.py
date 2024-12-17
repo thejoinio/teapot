@@ -8,8 +8,8 @@ from django.http import Http404
 from django.conf import settings
 from rest_framework.response import Response
 from rest_framework import status
-from .models import TelegramMember, DiscordMember
-from .serializers import EmailSerializer
+from .models import TelegramMember, DiscordMember, JoindaAccount
+from .serializers import EmailSerializer, JoindaAccountSerializer
 
 import markdown, requests
 from adrf.views import APIView
@@ -220,3 +220,88 @@ class VerifyDiscordView(APIView):
     @sync_to_async
     def member_exists_in_cache(self, username):
         return DiscordMember.objects.filter(name=username).exists()
+
+class VerifyJoindaAccountView(APIView):
+    
+    async def post(self, request):
+        serializer = JoindaAccountSerializer(data=request.data)
+        if serializer.is_valid():
+            discord_username = request.data.get('discord_username', '')
+            if not discord_username:
+                await self.save_serialized_data(serializer=serializer)
+                return Response({'status': 'success', 'message': f'Account added successfully'})
+            
+            # check cached data first
+            member_exists_in_cache = await self.member_exists_in_cache(discord_username)
+            if not member_exists_in_cache:
+                # discord username is not on the list of cached members
+                # check with discord
+                try:
+                    await discord_client.login(discord_bot_token)
+
+                    member_is_in_server = False
+
+                    guild = await self.get_discord_guild()
+
+                    if not guild:
+                        raise Exception("cannot find discord server")
+                    
+                    members = [member async for member in guild.fetch_members()]
+                        
+                    for member in members:
+                        if member.name == discord_username:
+                            member_is_in_server = True
+                            discord_member_id = member.id
+                            is_discord_bot = member.bot
+                            discord_nick = member.nick or ''
+                            break
+                    
+                    await cache_server_members(members)
+
+                    if member_is_in_server:
+                        # discord username is a member of the channel, continue
+                        await self.save_serialized_data(serializer, discord_member_id=discord_member_id, is_discord_bot=is_discord_bot, discord_nick=discord_nick)
+                        discord_client.close()
+                        return Response({'status': 'success', 'message': f'Account added successfully'})
+                    else:
+                        discord_client.close()
+                        return Response({'status': 'error', 'message': f'{discord_username} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
+                except Exception as e:
+                    discord_client.close()
+                    return Response({'status': 'error', 'message': str(e)}, status=400)
+            else:
+                member = member_exists_in_cache
+                discord_member_id = member.member_id
+                is_discord_bot = member.bot
+                discord_nick = member.nick or ''
+                await self.save_serialized_data(serializer, discord_member_id=discord_member_id, is_discord_bot=is_discord_bot, discord_nick=discord_nick)
+                discord_client.close()
+                return Response({'status': 'success', 'message': f'Account added successfully'})
+        else:
+            return Response({'status': 'error', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    async def get_discord_guild(self):
+        await discord_client.login(discord_bot_token)
+
+        guilds = [guild async for guild in discord_client.fetch_guilds(limit=150)]
+        
+        for guild in guilds:
+            if guild.id == discord_server_id:
+                return guild
+        
+        return None
+
+    @sync_to_async
+    def member_exists_in_cache(self, discord_username):
+        if DiscordMember.objects.filter(name=discord_username).exists():
+            return DiscordMember.objects.get(name=discord_username)
+        else:
+            return False
+
+    @sync_to_async
+    def save_serialized_data(Self, serializer, **kwargs):
+        serializer.save(**kwargs)
+    
+    @sync_to_async
+    def identifier_used(self, email, discord_username):
+        return JoindaAccount.email_and_discord_used(email, discord_username)
