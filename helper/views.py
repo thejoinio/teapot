@@ -195,13 +195,13 @@ class VerifyDiscordView(APIView):
                 await cache_server_members(members)
 
                 if member_is_in_server:
-                    discord_client.close()
+                    await discord_client.close()
                     return Response({'status': 'success', 'message': f'{username} is a member of the server', 'source': 'discord'})
                 else:
-                    discord_client.close()
+                    await discord_client.close()
                     return Response({'status': 'error', 'message': f'{username} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
-                discord_client.close()
+                await discord_client.close()
                 return Response({'status': 'error', 'message': str(e)}, status=400)
             finally:
                 await discord_client.close()
@@ -261,13 +261,13 @@ class VerifyJoindaAccountView(APIView):
                     if member_is_in_server:
                         # discord username is a member of the channel, continue
                         await self.save_serialized_data(serializer, discord_member_id=discord_member_id, is_discord_bot=is_discord_bot, discord_nick=discord_nick)
-                        discord_client.close()
+                        await discord_client.close()
                         return Response({'status': 'success', 'message': f'Account added successfully'})
                     else:
-                        discord_client.close()
+                        await discord_client.close()
                         return Response({'status': 'error', 'message': f'{discord_username} is not a member of the server'}, status=status.HTTP_400_BAD_REQUEST)
                 except Exception as e:
-                    discord_client.close()
+                    await discord_client.close()
                     return Response({'status': 'error', 'message': str(e)}, status=400)
             else:
                 member = member_exists_in_cache
@@ -275,7 +275,7 @@ class VerifyJoindaAccountView(APIView):
                 is_discord_bot = member.bot
                 discord_nick = member.nick or ''
                 await self.save_serialized_data(serializer, discord_member_id=discord_member_id, is_discord_bot=is_discord_bot, discord_nick=discord_nick)
-                discord_client.close()
+                await discord_client.close()
                 return Response({'status': 'success', 'message': f'Account added successfully'})
         else:
             return Response({'status': 'error', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
