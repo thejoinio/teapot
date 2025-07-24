@@ -8,7 +8,7 @@ from django.http import Http404
 from django.conf import settings
 from rest_framework.response import Response
 from rest_framework import status
-from .models import TelegramMember, DiscordMember, JoindaAccount
+from .models import Email, TelegramMember, DiscordMember, JoindaAccount
 from .serializers import EmailSerializer, JoindaAccountSerializer
 
 import markdown, requests
@@ -16,7 +16,7 @@ from adrf.views import APIView
 
 from teapot.config import TELEGRAM_CHANNEL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID,\
       ZEPTOMAIL_TEMPLATE_ALIAS, ZEPTOMAIL_SENDMAIL_TOKEN, ZEPTOMAIL_SENDER, \
-      ZEPTOMAIL_SENDER_ADDRESS, CAMPAIGN_CODES
+      ZEPTOMAIL_SENDER_ADDRESS, CAMPAIGN_CODES, CAMPAIGN_TEMPLATES
 from .services.telegram import telegram_client, cache_channel_members
 from .services.discord import discord_client, cache_server_members
 
@@ -40,6 +40,7 @@ def render_markdown_page(request, page_name):
         'title': page_name.capitalize()
     })
 
+
 class SubmitEmailView(APIView):
     VALID_CAMPAIGNS = CAMPAIGN_CODES
 
@@ -48,7 +49,7 @@ class SubmitEmailView(APIView):
         if serializer.is_valid():
             email_address = serializer.validated_data['address']
             country = serializer.validated_data.get('country', None)  # Optional country
-            campaign = serializer.validated_data.get('campaign', None)  # Optional campaign
+            campaign = serializer.validated_data['campaign']  # Required campaign
             discord_username = serializer.validated_data.get('discord_username', None) # Optional Discord username
 
             # Validate the country (ISO 3166-1 alpha-2)
@@ -57,23 +58,31 @@ class SubmitEmailView(APIView):
                                 status=status.HTTP_400_BAD_REQUEST)
 
             # Validate the campaign against valid campaign codes
-            if campaign and campaign not in self.VALID_CAMPAIGNS:
+            if campaign not in self.VALID_CAMPAIGNS:
                 return Response({'status': 'error', 'message': 'Invalid campaign code.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if email already exists for this campaign
+            if Email.objects.filter(address=email_address, campaign=campaign).exists():
+                return Response({'status': 'error', 'message': 'Email already registered for this campaign.'},
                                 status=status.HTTP_400_BAD_REQUEST)
             
             serializer.save()
 
+            # Check if campaign has a corresponding email template
+            if campaign not in CAMPAIGN_TEMPLATES:
+                return Response({'status': 'success', 'email': email_address, 'message': 'Email registered. Email notification not set for this campaign.'},
+                               status=status.HTTP_201_CREATED)
+
             # Send welcome email using ZeptoMail Template API
-            zepto_mail_template_alias = ZEPTOMAIL_TEMPLATE_ALIAS
+            zepto_mail_template_alias = campaign  # Campaign code is the template alias
             zepto_mail_sendmail_token = ZEPTOMAIL_SENDMAIL_TOKEN
             zepto_mail_api_url = 'https://api.zeptomail.com/v1.1/email/template'
 
             # Add the optional fields to the merge_info if provided
-            merge_info = {}
+            merge_info = {'campaign': campaign}
             if country:
                 merge_info['country'] = country
-            if campaign:
-                merge_info['campaign'] = campaign
 
             payload = {
                 'from': {
