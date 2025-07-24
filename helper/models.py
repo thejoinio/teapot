@@ -9,7 +9,7 @@ class Email(models.Model):
     address = models.EmailField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     country = models.CharField(max_length=2, null=True, blank=True)  # Optional two-letter country code
-    campaign = models.CharField(max_length=10, null=True, blank=True)  # Optional campaign code
+    campaign = models.CharField(max_length=20, null=True, blank=True)  # Optional campaign code
     discord_username = models.CharField(max_length=32, null=True, blank=True) # Optional Discord username
 
     def __str__(self):
