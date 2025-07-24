@@ -4,7 +4,7 @@ from .models import Email, JoindaAccount
 
 class EmailSerializer(serializers.ModelSerializer):
     country = serializers.CharField(max_length=2, required=False)  # Optional country field
-    campaign = serializers.CharField(max_length=10, required=False)  # Optional campaign field
+    campaign = serializers.CharField(max_length=20, required=False)  # Optional campaign field
     discord_username = serializers.CharField(max_length=32, required=False)  # Optional Discord username
     class Meta:
         model = Email
