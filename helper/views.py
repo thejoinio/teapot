@@ -8,6 +8,7 @@ from django.http import Http404
 from django.conf import settings
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.throttling import AnonRateThrottle
 from .models import Email, TelegramMember, DiscordMember, JoindaAccount
 from .serializers import EmailSerializer, JoindaAccountSerializer
 
@@ -43,6 +44,7 @@ def render_markdown_page(request, page_name):
 
 class SubmitEmailView(APIView):
     VALID_CAMPAIGNS = CAMPAIGN_CODES
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         serializer = EmailSerializer(data=request.data)
