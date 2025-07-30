@@ -1,5 +1,7 @@
 # teapot/config.py
 
+from datetime import date
+
 from environs import Env
 
 # Initialize environs
@@ -28,3 +30,6 @@ ZEPTOMAIL_SENDER_ADDRESS = env.str('ZEPTOMAIL_SENDER_ADDRESS', default='')
 
 CAMPAIGN_CODES = env.list('CAMPAIGN_CODES', default=[])
 CAMPAIGN_TEMPLATES = env.list('CAMPAIGN_TEMPLATES', default=[])
+
+SUBSCRIBER_COUNT_STARTING_VALUE = env.int('SUBSCRIBER_COUNT_STARTING_VALUE', default=4200)
+SUBSCRIBER_COUNT_STARTING_DAY = date.fromisoformat(env.str('SUBSCRIBER_COUNT_STARTING_DAY', default="2025-07-20"))

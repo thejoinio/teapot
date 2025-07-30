@@ -1,6 +1,9 @@
 # helper/views.py
 
 import os
+import random
+from datetime import timedelta
+from django.utils import timezone
 from asgiref.sync import sync_to_async
 
 from django.shortcuts import render
@@ -17,7 +20,8 @@ from adrf.views import APIView
 
 from teapot.config import TELEGRAM_CHANNEL, DISCORD_BOT_TOKEN, DISCORD_SERVER_ID,\
       ZEPTOMAIL_TEMPLATE_ALIAS, ZEPTOMAIL_SENDMAIL_TOKEN, ZEPTOMAIL_SENDER, \
-      ZEPTOMAIL_SENDER_ADDRESS, CAMPAIGN_CODES, CAMPAIGN_TEMPLATES
+      ZEPTOMAIL_SENDER_ADDRESS, CAMPAIGN_CODES, CAMPAIGN_TEMPLATES, \
+      SUBSCRIBER_COUNT_STARTING_VALUE, SUBSCRIBER_COUNT_STARTING_DAY
 from .services.telegram import telegram_client, cache_channel_members
 from .services.discord import discord_client, cache_server_members
 
@@ -41,6 +45,29 @@ def render_markdown_page(request, page_name):
         'title': page_name.capitalize()
     })
 
+class SubscriberCountView(APIView):
+    def get(self, request):
+        # Get current date
+        current_date = timezone.now().date()
+        
+        # Calculate days since starting day
+        days_passed = (current_date - SUBSCRIBER_COUNT_STARTING_DAY).days
+        
+        # Initialize base count
+        current_count = SUBSCRIBER_COUNT_STARTING_VALUE
+        
+        # Use a seed based on the date to ensure same random increment for the same day
+        for day in range(days_passed + 1):
+            # Set seed based on the specific day to ensure consistency within a day
+            specific_date = SUBSCRIBER_COUNT_STARTING_DAY + timedelta(days=day)
+            random.seed(specific_date.toordinal())
+            
+            # Only add increment for past days (current day uses same seed but doesn't increment yet)
+            if day < days_passed:
+                daily_increment = random.randint(60, 120)  # Random increment between 60 and 120
+                current_count += daily_increment
+        
+        return Response({"subscriber_count": current_count})
 
 class SubmitEmailView(APIView):
     VALID_CAMPAIGNS = CAMPAIGN_CODES
